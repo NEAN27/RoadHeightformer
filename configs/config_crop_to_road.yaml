@@ -1,0 +1,76 @@
+# Variant of config_freeze_baseline.yaml — enables crop_to_road in the dataloader.
+# The dataset selector in train.py:1044+ uses substring matching ('CARDSetSmall' in args.dataset),
+# so we keep "CARDSetSmall" in the name and append "_cropped" to distinguish the run in wandb.
+#
+# Files used by this branch (all verified to exist):
+#   /data/T7/cariad dataset                                       (root_dir)
+#   /data/rhf/train_small_dataset_thesis_cropped.txt              (train split)
+#   /data/rhf/val_small_dataset_thesis_cropped.txt                (val split)
+#   /data/rhf/train_preprocessed_small_data_thesis_cropped/       (preprocessed cache)
+#   /data/rhf/val_preprocessed_small_data_thesis_cropped/         (preprocessed cache)
+
+# Dataset Configuration
+dataset:
+  name: "CARDSetSmall_cropped"
+  stereo: false
+  preprocessed: true
+  augmentation: false
+  clamp_gt: false
+  crop_to_road: true
+
+# Model Configuration
+model:
+  backbone: "DINOv2_fb"
+  regression: true
+  normalize: false
+  pred_head_dim: 128
+  cla_res: 0.5
+  dino_size: "small"
+  train_encoder: false
+  dinov2_layers: [5, 7, 9, 11]
+  upsampler_kind: "patch2feature"
+
+# Training Configuration
+training:
+  batch_size: 8
+  epochs: 30
+  seed: 307
+
+# Loss Configuration
+loss:
+  type: "composite"
+  pixel_type: "MSE"
+  gradient_weight: 0
+  composite_weights:
+    pixel: 0.3
+    gradient: 1.0
+    structure: 0.0
+    normal: 1.0
+    smoothness: 0.0
+
+# Optimizer Configuration
+optimizer:
+  lr: 1.0e-4
+  lr_encoder: 1.0e-5
+
+# Scheduler Configuration
+scheduler:
+  type: "onecycle"
+
+# Logging and Checkpointing
+logging:
+  logdir: "/data/rhf/checkpoints/"
+  summary_freq: 10
+
+# Weights & Biases (WandB)
+wandb:
+  enabled: true
+  entity: "erwan-adonie-njike-ndjongang-cariad"
+  project: "RoadHeightFormer"
+  name_run: "RHF_crop_to_road"
+  notes: "Freeze baseline + crop_to_road=True (preprocessed disabled, cache invalid)"
+  dir: "/data/rhf/wandb"
+
+# Checkpoint Loading
+checkpoint:
+  load_path: null

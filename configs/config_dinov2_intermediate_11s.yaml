@@ -1,0 +1,74 @@
+# Variant of config_freeze_baseline.yaml — overrides the DINOv2 intermediate-layer
+# selection used by ElevationDinoV2FB (default in the freeze run is (5, 7, 9, 11)).
+# This config takes the LAST block four times: (11, 11, 11, 11).
+# Everything else is identical to the freeze baseline.
+
+# Dataset Configuration
+dataset:
+  name: "CARDSetSmall"
+  stereo: false
+  preprocessed: true
+  augmentation: false
+  clamp_gt: false
+  crop_to_road: false
+
+# Model Configuration
+model:
+  backbone: "DINOv2_fb"
+  regression: true
+  normalize: false
+  pred_head_dim: 128
+  cla_res: 0.5
+  dino_size: "small"
+  train_encoder: false
+  # ViT intermediate-block indices fed to patch2feature / DinoUpsampler.
+  # Freeze baseline uses [5, 7, 9, 11]; here we take ONLY the last block.
+  # DINOv2's get_intermediate_layers rejects duplicate indices, so we ask for
+  # block 11 once and let patch2feature broadcast that single tensor to its
+  # four input streams (see patch2feature.forward: "len(feats) == 1" guard).
+  dinov2_layers: [11]
+  upsampler_kind: "patch2feature"
+
+# Training Configuration
+training:
+  batch_size: 8
+  epochs: 30
+  seed: 307
+
+# Loss Configuration
+loss:
+  type: "composite"
+  gradient_weight: 0
+  composite_weights:
+    pixel: 0.3
+    gradient: 1.0
+    structure: 0.0
+    normal: 1.0
+    smoothness: 0.0
+
+# Optimizer Configuration
+optimizer:
+  lr: 1.0e-4
+  lr_encoder: 1.0e-5
+
+# Scheduler Configuration
+scheduler:
+  type: "onecycle"
+
+# Logging and Checkpointing
+logging:
+  logdir: "/data/rhf/checkpoints/"
+  summary_freq: 10
+
+# Weights & Biases (WandB)
+wandb:
+  enabled: true
+  entity: "erwan-adonie-njike-ndjongang-cariad"
+  project: "RoadHeightFormer"
+  name_run: "RHF_dinov2_layers_11_11_11_11"
+  notes: "Freeze baseline + DINOv2 intermediate layers = (11, 11, 11, 11)"
+  dir: "/data/rhf/wandb"
+
+# Checkpoint Loading
+checkpoint:
+  load_path: null

@@ -2,19 +2,19 @@ import numpy as np
 from utils.experiment import make_nograd_func
 import torch
 import matplotlib.pyplot as plt
+from cardset.dataset import CARDSetDataset, CARDSetDatasetV2Smalldataset
 
 class Metric():
     def __init__(self, ele_range, num_grids_z, distance_wise=False):
         self.ele_range = ele_range*100
-        # self.res = cla_res  # in cm
-        # self.num_classes = int(2 * self.ele_range / self.res)
-
-        self.metric_all = np.zeros(3,)
+                                     
+                                                               
+        self.metric_all = np.zeros(7,)
         self.count_all = 0
 
-        # if compute the distance-wise metric in the ROI grid
+                                                             
         self.distance_wise = distance_wise
-        self.intervals = 11  # number of grids for every segment
+        self.intervals = 11                                     
         self.num_intervals = int(num_grids_z/self.intervals)+1
         self.metric_wise = np.zeros((self.num_intervals, 3))
         self.count_wise = np.zeros(self.num_intervals)
@@ -39,6 +39,7 @@ class Metric():
 
     @make_nograd_func
     def get_metric(self):
+                                    
         metric_all = self.metric_all / self.count_all
         if self.distance_wise:
             metric_wise = self.metric_wise / self.count_wise.reshape(-1, 1)
@@ -55,20 +56,82 @@ class Metric():
         err_mask = abs_err > 0.5
         ratio_thresh = torch.mean(err_mask.float())
 
-        return np.array(torch.tensor([torch.mean(abs_err), rmse, ratio_thresh], device='cpu'))
+                  
+        epsilon = 1e-6                               
+                                                                                                              
+
+        abs_err_01 = torch.mean((abs_err > 0.1).float())                               
+        abs_err_1 = torch.mean((abs_err > 1.0).float())                                
+
+                              
+        le90 = torch.quantile(abs_err, 0.9)                                     
+
+                        
+        grad_pred_x = torch.abs(ele_pred[:, 1:] - ele_pred[:, :-1])                           
+        grad_pred_y = torch.abs(ele_pred[1:, :] - ele_pred[:-1, :])                           
+        grad_gt_x = torch.abs(ele_gt[:, 1:] - ele_gt[:, :-1])                                 
+        grad_gt_y = torch.abs(ele_gt[1:, :] - ele_gt[:-1, :])                                 
+        grad_err_x = torch.abs(grad_pred_x - grad_gt_x).mean()                                      
+        grad_err_y = torch.abs(grad_pred_y - grad_gt_y).mean()                                      
+        grad_err = (grad_err_x + grad_err_y) / 2 
+
+        return np.array(torch.tensor([torch.mean(abs_err), rmse, ratio_thresh, abs_err_01, abs_err_1, le90, grad_err], device='cpu'))
+    
 
     @make_nograd_func
-    def compute(self, ele_pred, ele_gt, mask):
-        # ele_pred: [B, H, W]
-        mask_roi = torch.logical_and(ele_gt > -self.ele_range, ele_gt < self.ele_range)
-        print("check the mask_roi",mask_roi.sum())
-        ele_mask = torch.logical_and(mask_roi, mask)
-        print("check the mask_roi",ele_mask.sum())
-        print("ele_gt", ele_gt.max(), ele_gt.min())
+    def compute_values_rhf(self, ele_gt, ele_pred, ele_mask):
+        ele_gt_masked = ele_gt[ele_mask]
+        ele_pred_masked = ele_pred[ele_mask]
+        abs_err = torch.abs(ele_gt_masked - ele_pred_masked)
+        rmse = (ele_gt_masked - ele_pred_masked) ** 2
+        rmse = torch.sqrt(rmse.mean())
 
+        err_mask = abs_err > 0.5
+        ratio_thresh = torch.mean(err_mask.float())
+
+                  
+        epsilon = 1e-6                               
+
+                                   
+        abs_err_01 = torch.mean((abs_err > 0.1).float())                               
+        abs_err_1 = torch.mean((abs_err > 1.0).float())                                
+
+                              
+        le90 = torch.quantile(abs_err, 0.9)                                     
+
+                                                                                 
+        mask_gx = ele_mask[:, 1:] & ele_mask[:, :-1]
+        mask_gy = ele_mask[1:, :] & ele_mask[:-1, :]
+
+        grad_pred_x = ele_pred[:, 1:] - ele_pred[:, :-1]
+        grad_pred_y = ele_pred[1:, :] - ele_pred[:-1, :]
+        grad_gt_x = ele_gt[:, 1:] - ele_gt[:, :-1]
+        grad_gt_y = ele_gt[1:, :] - ele_gt[:-1, :]
+
+        grad_err_x = torch.abs(grad_pred_x - grad_gt_x)[mask_gx].mean() if mask_gx.any() else torch.tensor(0.0)
+        grad_err_y = torch.abs(grad_pred_y - grad_gt_y)[mask_gy].mean() if mask_gy.any() else torch.tensor(0.0)
+        grad_err = (grad_err_x + grad_err_y) / 2
+    
+        return np.array(torch.tensor([torch.mean(abs_err), rmse, ratio_thresh, abs_err_01, abs_err_1, le90, grad_err], device='cpu'))
+
+
+    @make_nograd_func
+    def compute(self, ele_pred, ele_gt, ele_mask):
+                             
+        mask_roi = torch.logical_and(ele_gt > -self.ele_range, ele_gt < self.ele_range)
+                                                    
+        ele_mask = torch.logical_and(mask_roi, ele_mask)
+                                                    
+                                                      
+        ele_mask = ele_mask.bool()
+                                              
+        if ele_mask.sum() == 0:
+            print("Skipping computation due to zero ele_mask")
+            return
 
         self.count_all += 1
-        self.metric_all += self.compute_values(ele_gt[ele_mask], ele_pred[ele_mask])
+                                                                                     
+        self.metric_all += self.compute_values_rhf(ele_gt.squeeze(), ele_pred.squeeze(), ele_mask.squeeze())
 
         if self.distance_wise:
             for i in range(self.num_intervals):

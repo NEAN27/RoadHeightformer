@@ -1,0 +1,67 @@
+# Variant of config_freeze_baseline.yaml — swaps the backbone to EfficientNet.
+# train.py:1102 routes this to ElevationDA3, and DINOv2-specific kwargs
+# (dinov2_layers, upsampler_kind) are not passed through.
+
+# Dataset Configuration
+dataset:
+  name: "CARDSetSmall"
+  stereo: false
+  preprocessed: true
+  augmentation: false
+  clamp_gt: false
+  crop_to_road: false
+
+# Model Configuration
+model:
+  backbone: "efficientnet"
+  regression: true
+  normalize: false
+  pred_head_dim: 128
+  cla_res: 0.5
+  dino_size: "small"
+  train_encoder: false
+
+# Training Configuration
+training:
+  batch_size: 8
+  epochs: 30
+  seed: 307
+
+# Loss Configuration
+loss:
+  type: "composite"
+  pixel_type: "MSE"
+  gradient_weight: 0
+  composite_weights:
+    pixel: 0.3
+    gradient: 1.0
+    structure: 0.0
+    normal: 1.0
+    smoothness: 0.0
+
+# Optimizer Configuration
+optimizer:
+  lr: 1.0e-4
+  lr_encoder: 1.0e-5
+
+# Scheduler Configuration
+scheduler:
+  type: "onecycle"
+
+# Logging and Checkpointing
+logging:
+  logdir: "/data/rhf/checkpoints/"
+  summary_freq: 10
+
+# Weights & Biases (WandB)
+wandb:
+  enabled: true
+  entity: "erwan-adonie-njike-ndjongang-cariad"
+  project: "RoadHeightFormer"
+  name_run: "RHF_efficientnet"
+  notes: "Freeze baseline + EfficientNet backbone"
+  dir: "/data/rhf/wandb"
+
+# Checkpoint Loading
+checkpoint:
+  load_path: null

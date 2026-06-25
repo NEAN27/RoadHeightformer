@@ -1,0 +1,67 @@
+# Example configuration for ablation study: L1 Loss Baseline
+# This config uses L1 loss instead of composite loss for comparison
+
+# Dataset Configuration
+dataset:
+  name: "CARDSetSmall"
+  stereo: false
+  preprocessed: True
+  augmentation: false
+  root_dir: "/data/T7/cariad dataset"
+  train_split: "/data/rhf/train_small_dataset.txt"
+  val_split: "/data/rhf/val_small_dataset.txt"
+
+# Model Configuration
+model:
+  backbone: "DepthAnything3"
+  regression: true
+  normalize: false
+  pred_head_dim: 128
+  cla_res: 0.5
+  dino_size: "small"
+
+# Training Configuration
+training:
+  batch_size: 8
+  epochs: 100
+  seed: 307
+
+# Loss Configuration - L1 baseline
+loss:
+  type: "L1"
+  # composite_weights not used for L1 loss
+
+# Optimizer Configuration
+optimizer:
+  lr: 1e-4
+  lr_encoder: 1e-5
+  weight_decay: 1e-4
+  betas: [0.9, 0.999]
+
+# Scheduler Configuration
+scheduler:
+  type: "onecycle"
+  pct_start: 0.1
+  div_factor: 20
+  anneal_strategy: "linear"
+  three_phase: false
+
+# Logging and Checkpointing
+logging:
+  logdir: "/data/rhf/checkpoints/"
+  summary_freq: 10
+
+# Weights & Biases (WandB)
+wandb:
+  enabled: true
+  entity: "erwan-adonie-njike-ndjongang-cariad"
+  project: "RoadHeightFormer"
+  name_run: "l1_baseline"
+  notes: "L1 loss baseline for ablation study"
+  dir: "/data/rhf/wandb"
+
+# Early Stopping
+early_stopping:
+  enabled: true
+  patience: 300
+  min_delta: 0.001

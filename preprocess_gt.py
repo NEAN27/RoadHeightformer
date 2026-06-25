@@ -30,7 +30,6 @@ def get_item(index):
     coord_frame = coord_frame.rotate(R, center=(0, 0, 0))
     ########   calculate the euler angles of the camera (relative to local ENU coord)   ########
     [pitch_cam, roll_cam, yaw_cam] = dataset.matrix2euler(l2c_calib_cur['R'] @ np.linalg.inv(R_cur2enu))
-    print(pitch_cam, roll_cam, yaw_cam)
     pitch_cam -= 1.5708  # pi/2
     R_X = np.array(
         [[1, 0, 0], [0, np.cos(pitch_cam), np.sin(pitch_cam)], [0, -np.sin(pitch_cam), np.cos(pitch_cam)]],
@@ -75,7 +74,7 @@ def get_item(index):
 
     viz.show_settings = True
     app.add_window(viz)
-    app.run()
+    #app.run()
     #o3d.visualization.draw_geometries([road_frame, mou])
 
     # crop the point cloud according to the given range of interest

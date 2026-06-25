@@ -13,4 +13,11 @@ RSRD-dense
 RSRD_dev_toolkit-main
 RSRD_ang
 preprocessed.zip
-checkpoints
+checkpoints/
+models/RoabBEV-mono.ckpt
+*.png
+*.pkl
+*.ckpt
+*.zip
+*.log
+*.ckpt

@@ -1,0 +1,75 @@
+# Software-freeze baseline config (pinned 2026-05-03)
+# Equivalent of the pinned train.py command line:
+#   train.py --lr 1e-4 --dataset CARDSetSmall --preprocessed --epochs 60 --batch_size 16
+#            --regression --gradient_weight 0 --loss composite --scheduler onecycle
+#            --name_run RHF_compositeloss_dinov2_doble_check --backbone DINOv2_fb
+#            --notes "L2*0.3, Gradient, normal, epochs 60, 2nd experiment for double ckeck"
+#
+# All keys below are now loaded by utils/config.py::update_args_with_config.
+# After uncommenting line 1022 in train.py, this YAML alone reproduces the freeze.
+
+# Dataset Configuration
+dataset:
+  name: "CARDSetSmall"
+  stereo: false
+  preprocessed: true
+  augmentation: false
+  clamp_gt: false
+  crop_to_road: false
+
+# Model Configuration
+model:
+  backbone: "DINOv2_fb"
+  regression: true
+  normalize: false
+  pred_head_dim: 128
+  cla_res: 0.5
+  dino_size: "small"
+  dinov2_layers: [5, 7, 9, 11]
+  train_encoder: false
+  upsampler_kind: "patch2feature"
+
+
+# Training Configuration
+training:
+  batch_size: 8
+  epochs: 30
+  seed: 307
+
+# Loss Configuration
+loss:
+  type: "composite"
+  gradient_weight: 0          # legacy logging field (pinned --gradient_weight 0)
+  composite_weights:           # match the previously hardcoded values in train.py
+    pixel: 0.3
+    gradient: 1.0
+    structure: 0.0
+    normal: 1.0
+    smoothness: 0.0
+
+# Optimizer Configuration
+optimizer:
+  lr: 1.0e-4
+  lr_encoder: 1.0e-5
+
+# Scheduler Configuration
+scheduler:
+  type: "onecycle"
+
+# Logging and Checkpointing
+logging:
+  logdir: "/data/rhf/checkpoints/"
+  summary_freq: 10
+
+# Weights & Biases (WandB)
+wandb:
+  enabled: true
+  entity: "erwan-adonie-njike-ndjongang-cariad"
+  project: "RoadHeightFormer"
+  name_run: "RHF_compositeloss_dinov2_rhf_baseline"
+  notes: "L2*0.3, Gradient, normal, epochs 30, 2nd experiment for double ckeck"
+  dir: "/data/rhf/wandb"
+
+# Checkpoint Loading
+checkpoint:
+  load_path: null

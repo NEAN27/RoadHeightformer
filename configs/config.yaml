@@ -1,0 +1,106 @@
+# RoadHeightFormer Training Configuration
+# This config file contains all the parameters used in train.py
+
+# Dataset Configuration
+dataset:
+  name: "CARDSet"  # Options: RSRD, CARDSet, CARDSetSmall, CARDSetV2Small
+  stereo: false    # true for RoadBEV-stereo, false for RoadBEV-mono
+  preprocessed: false  # use preprocessed data if available
+  augmentation: true    # enable data augmentation for training
+  root_dir: "/data/T7/cariad dataset"  # dataset root directory
+  train_split: "/data/T7/cariad dataset/train_all_data_clean_NN_RHF.txt"
+  val_split: "/data/T7/cariad dataset/val_all_data_clean_NN_RHF.txt"
+  # Voxel vertical extent. y_range is the half-range (m) above/below base_height.
+  # If num_grids_y is set, it pins the number of vertical voxel bins and grid_res_y
+  # is derived as 2*y_range/num_grids_y, so the head architecture stays fixed
+  # regardless of y_range. If left null, num_grids_y is derived from y_range/grid_res_y
+  # (legacy behavior, head input channels scale with y_range).
+  # y_range: 0.2
+  # num_grids_y: 40
+
+# Model Configuration
+model:
+  backbone: "efficientnet"  # Options: efficientnet, dino
+  regression: true          # true for regression, false for classification
+  normalize: false          # normalize heights to [-1, 1]
+  pred_head_dim: 128        # bottleneck dimension between transformer and CNN head
+  cla_res: 0.5             # class resolution for elevation classification (if not regression)
+  dino_size: "small"       # ViT encoder size (if using dino backbone)
+
+# Training Configuration
+training:
+  batch_size: 8
+  epochs: 50
+  seed: 307
+  device: "cuda"  # auto-detected, but can be overridden
+
+# Loss Configuration
+loss:
+  type: "composite"  # Options: L1, MSE, lpips, composite, scale_affine, gaussian_NLL
+  # Composite loss weights (only used if loss.type == "composite")
+  composite_weights:
+    pixel: 0.3      # primary supervision
+    gradient: 1.0   # gradient matching
+    structure: 0.0  # SSIM-like structural loss
+    normal: 1.0     # surface orientation consistency
+    smoothness: 0.0 # edge-aware smoothness
+
+# Optimizer Configuration
+optimizer:
+  lr: 1e-4           # learning rate for decoder
+  lr_encoder: 1e-5   # learning rate for encoder (backbone)
+  weight_decay: 1e-4
+  betas: [0.9, 0.999]
+
+# Scheduler Configuration
+scheduler:
+  type: "onecycle"  # Options: onecycle, cosine, reduceonplateau
+  # OneCycleLR parameters
+  pct_start: 0.1
+  div_factor: 20
+  anneal_strategy: "linear"
+  three_phase: false
+  # Cosine scheduler parameters
+  warmup_ratio: 0.1  # 10% warmup
+  # ReduceLROnPlateau parameters
+  factor: 0.5
+  patience: 5
+  min_lr: 1e-6
+
+# Logging and Checkpointing
+logging:
+  logdir: "/data/rhf/checkpoints/"
+  summary_freq: 10
+  save_freq: 10  # save checkpoint every N epochs
+
+# Weights & Biases (WandB)
+wandb:
+  enabled: true
+  entity: "erwan-adonie-njike-ndjongang-cariad"
+  project: "RoadHeightFormer"
+  name_run: "experiment_1"
+  notes: "Default configuration for RoadHeightFormer training"
+  dir: "/data/rhf/wandb"
+
+# Checkpoint Loading (optional)
+checkpoint:
+  load_path: null  # path to checkpoint to resume from, null for fresh training
+  resume_optimizer: true
+  resume_scheduler: true
+
+# Early Stopping
+early_stopping:
+  enabled: true
+  patience: 300
+  min_delta: 0.001
+
+# DataLoader Configuration
+dataloader:
+  num_workers: 8
+  pin_memory: true
+  drop_last: true
+
+# Evaluation Configuration
+evaluation:
+  batch_size: 1
+  fixed_samples: [0, 1, 2]  # indices of samples to log during training

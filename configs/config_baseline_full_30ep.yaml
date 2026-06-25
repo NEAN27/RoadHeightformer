@@ -1,0 +1,70 @@
+# Baseline run (DINOv2_fb + regression + composite loss) on the FULL CARDSet
+# split (train_all_data_clean_NN_RHF.txt / val_all_data_clean_NN_RHF.txt) for
+# 30 epochs. Same model / loss / optimiser / scheduler as the pinned
+# software-freeze baseline (config_freeze_baseline.yaml) — only the dataset
+# key (CARDSetSmall -> CARDSet) and the run name/notes differ.
+
+# Dataset Configuration
+dataset:
+  name: "CARDSet"
+  stereo: false
+  preprocessed: true
+  augmentation: false
+  clamp_gt: false
+  crop_to_road: false
+
+# Model Configuration
+model:
+  backbone: "DINOv2_fb"
+  regression: true
+  normalize: false
+  pred_head_dim: 128
+  cla_res: 0.5
+  dino_size: "small"
+  dinov2_layers: [5, 7, 9, 11]
+  train_encoder: false
+  upsampler_kind: "patch2feature"
+
+# Training Configuration
+training:
+  batch_size: 8
+  epochs: 30
+  seed: 307
+
+# Loss Configuration
+loss:
+  type: "composite"
+  gradient_weight: 0
+  composite_weights:
+    pixel: 0.3
+    gradient: 1.0
+    structure: 0.0
+    normal: 1.0
+    smoothness: 0.0
+
+# Optimizer Configuration
+optimizer:
+  lr: 1.0e-4
+  lr_encoder: 1.0e-5
+
+# Scheduler Configuration
+scheduler:
+  type: "onecycle"
+
+# Logging and Checkpointing
+logging:
+  logdir: "/data/rhf/checkpoints/"
+  summary_freq: 10
+
+# Weights & Biases (WandB)
+wandb:
+  enabled: true
+  entity: "erwan-adonie-njike-ndjongang-cariad"
+  project: "RoadHeightFormer"
+  name_run: "RHF_baseline_full_30ep"
+  notes: "Baseline (DINOv2_fb + regression + composite loss) on full CARDSet, 30 epochs"
+  dir: "/data/rhf/wandb"
+
+# Checkpoint Loading
+checkpoint:
+  load_path: null

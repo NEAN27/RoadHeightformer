@@ -1,0 +1,100 @@
+# RoadHeightFormer — y_range = 0.4 m, num_grids_y pinned to 40
+# Same number of vertical voxel bins as the y_range=0.2 baseline (so the
+# regression head's input shape and any compatible checkpoint still load),
+# but each Y-bin now spans 2 cm instead of 1 cm (grid_res_y = 2*y_range/40 = 0.02).
+
+# Dataset Configuration
+dataset:
+  name: "CARDSet_y04_g40_square"  # Options: RSRD, CARDSet, CARDSet_y04_g40_square, CARDSetSmall, CARDSetV2Small
+  stereo: false    # true for RoadBEV-stereo, false for RoadBEV-mono
+  preprocessed: true   # use preprocessed data (cached .gz from /data/rhf/{train,val}_preprocessed_data_y0.4_g40_square)
+  augmentation: true    # enable data augmentation for training
+  root_dir: "/data/T7/cariad dataset"  # dataset root directory
+  train_split: "/data/rhf/train_dataset_y0.4_g40_square.txt"
+  val_split: "/data/rhf/val_dataset_y0.4_g40_square.txt"
+  # Vertical voxel extent
+  y_range: 0.4       # half-range (m): voxel ROI spans [-0.4, +0.4] around base_height
+  num_grids_y: 40    # pinned; grid_res_y is derived as 2*y_range/num_grids_y = 0.02 m
+
+# Model Configuration
+model:
+  backbone: "DINOv2_fb"  # Options: efficientnet, dino
+  regression: true          # true for regression, false for classification
+  normalize: false          # normalize heights to [-1, 1]
+  pred_head_dim: 128        # bottleneck dimension between transformer and CNN head
+  cla_res: 0.5              # class resolution for elevation classification (if not regression)
+  dino_size: "small"        # ViT encoder size (if using dino backbone)
+
+# Training Configuration
+training:
+  batch_size: 8
+  epochs: 30
+  seed: 307
+  device: "cuda"
+
+# Loss Configuration
+loss:
+  type: "composite"
+  composite_weights:
+    pixel: 0.3
+    gradient: 1.0
+    structure: 0.0
+    normal: 1.0
+    smoothness: 0.0
+
+# Optimizer Configuration
+optimizer:
+  lr: 1e-4
+  lr_encoder: 1e-5
+  weight_decay: 1e-4
+  betas: [0.9, 0.999]
+
+# Scheduler Configuration
+scheduler:
+  type: "onecycle"
+  pct_start: 0.1
+  div_factor: 20
+  anneal_strategy: "linear"
+  three_phase: false
+  warmup_ratio: 0.1
+  factor: 0.5
+  patience: 5
+  min_lr: 1e-6
+
+# Logging and Checkpointing
+logging:
+  logdir: "/data/rhf/checkpoints/"
+  summary_freq: 10
+  save_freq: 10
+
+# Weights & Biases
+wandb:
+  enabled: true
+  entity: "erwan-adonie-njike-ndjongang-cariad"
+  project: "RoadHeightFormer"
+  name_run: "yrange04_pinned40"
+  notes: "y_range=0.4 with num_grids_y pinned to 40 (grid_res_y=0.02). Tests larger vertical ROI without changing head architecture."
+  dir: "/data/rhf/wandb"
+
+# Checkpoint Loading
+checkpoint:
+  load_path: null
+  resume_optimizer: true
+  resume_scheduler: true
+
+# Early Stopping
+early_stopping:
+  enabled: true
+  patience: 300
+  min_delta: 0.001
+
+# DataLoader Configuration
+dataloader:
+  num_workers: 8
+  pin_memory: true
+  drop_last: true
+
+# Evaluation Configuration
+evaluation:
+  batch_size: 1
+  fixed_samples: [0, 1, 2]

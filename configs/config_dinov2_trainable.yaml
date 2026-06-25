@@ -1,0 +1,70 @@
+# Variant of config_freeze_baseline.yaml — fine-tunes the DINOv2 encoder.
+# train_encoder=True puts the backbone in its own optimizer parameter group
+# with lr_encoder = 1e-5 (one order of magnitude below the decoder LR), so
+# the pretrained weights are updated but only slowly.
+
+# Dataset Configuration
+dataset:
+  name: "CARDSetSmall"
+  stereo: false
+  preprocessed: true
+  augmentation: false
+  clamp_gt: false
+  crop_to_road: false
+
+# Model Configuration
+model:
+  backbone: "DINOv2_fb"
+  regression: true
+  normalize: false
+  pred_head_dim: 128
+  cla_res: 0.5
+  dino_size: "small"
+  dinov2_layers: [5, 7, 9, 11]
+  upsampler_kind: "patch2feature"
+  # KEY DIFFERENCE: encoder is fine-tuned (no torch.no_grad, NOT in eval mode).
+  train_encoder: true
+
+# Training Configuration
+training:
+  batch_size: 8
+  epochs: 60
+  seed: 307
+
+# Loss Configuration
+loss:
+  type: "composite"
+  gradient_weight: 0
+  composite_weights:
+    pixel: 0.3
+    gradient: 1.0
+    structure: 0.0
+    normal: 1.0
+    smoothness: 0.0
+
+# Optimizer Configuration
+optimizer:
+  lr: 1.0e-4          # decoder LR
+  lr_encoder: 1.0e-5  # encoder LR — 10x smaller to limit drift from the pretrained prior
+
+# Scheduler Configuration
+scheduler:
+  type: "onecycle"
+
+# Logging and Checkpointing
+logging:
+  logdir: "/data/rhf/checkpoints/"
+  summary_freq: 10
+
+# Weights & Biases (WandB)
+wandb:
+  enabled: true
+  entity: "erwan-adonie-njike-ndjongang-cariad"
+  project: "RoadHeightFormer"
+  name_run: "RHF_dinov2_trainable"
+  notes: "Freeze baseline + train_encoder=True (encoder fine-tuned at lr_encoder=1e-5)"
+  dir: "/data/rhf/wandb"
+
+# Checkpoint Loading
+checkpoint:
+  load_path: null

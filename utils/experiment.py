@@ -65,7 +65,7 @@ def save_scalars(logger, mode_tag, scalar_dict, global_step):
             values = [values]
         for idx, value in enumerate(values):
             scalar_name = '{}/{}'.format(mode_tag, tag)
-            # if len(values) > 1:
+                                 
             scalar_name = scalar_name + "_" + str(idx)
             print(scalar_name, value)
 
@@ -92,9 +92,9 @@ def adjust_learning_rate(optimizer, epoch, base_lr, lrepochs):
     splits = lrepochs.split(':')
     assert len(splits) == 2
 
-    # parse the epochs to downscale the learning rate (before :)
+                                                                
     downscale_epochs = [int(eid_str) for eid_str in splits[0].split(',')]
-    # parse downscale rate (after :)
+                                    
     downscale_rate = float(splits[1])
     print("downscale epochs: {}, downscale rate: {}".format(downscale_epochs, downscale_rate))
 
@@ -197,8 +197,8 @@ def reduce_scalar_outputs(scalar_outputs):
         scalars = torch.stack(scalars, dim=0)
         dist.reduce(scalars, dst=0)
         if dist.get_rank() == 0:
-            # only main process gets accumulated, so only divide by
-            # world_size in this case
+                                                                   
+                                     
             scalars /= world_size
 
         reduced_scalars = defaultdict(list)
@@ -206,3 +206,59 @@ def reduce_scalar_outputs(scalar_outputs):
             reduced_scalars[name].append(scalar)
 
     return dict(reduced_scalars)
+
+import torch
+import matplotlib.pyplot as plt
+
+
+def save_feature_map(
+    feat: torch.Tensor,
+    filepath: str,
+    title: str = "",
+    cmap: str = "viridis",
+    vmin=None,
+    vmax=None,
+):
+    """
+    Save a 2D feature map to an image file.
+
+    Args:
+        feat: Tensor of shape
+              (H, W) or
+              (1, H, W) or
+              (B, H, W)
+        filepath: output image path (e.g. "feature.png")
+        title: optional title
+        cmap: matplotlib colormap
+        vmin/vmax: optional normalization limits
+    """
+
+    feat = feat.detach().cpu()
+
+                          
+    if feat.ndim == 3:
+        feat = feat[0]
+
+    if feat.ndim != 2:
+        raise ValueError(f"Expected 2D map, got shape {feat.shape}")
+
+    feat = feat.numpy()
+
+    plt.figure(figsize=(6, 6))
+    im = plt.imshow(feat, cmap=cmap, vmin=vmin, vmax=vmax)
+    plt.axis("off")
+
+    if title:
+        plt.title(title)
+
+    plt.colorbar(im, fraction=0.046, pad=0.04)
+    plt.tight_layout()
+    plt.savefig(filepath, bbox_inches="tight", pad_inches=0.1)
+    plt.close()
+
+def inspect_tensor(x):
+    print("max:", x.abs().max())
+    print("mean:", x.mean())
+    print("std:", x.std())
+    print("nan:", torch.isnan(x).any())
+    print("inf:", torch.isinf(x).any())

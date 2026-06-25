@@ -1,0 +1,68 @@
+# Variant of config_freeze_baseline.yaml — composite loss reduced to JUST the L1 pixel term
+# (gradient / structure / normal / smoothness all zero, pixel_type switched to L1).
+
+# Dataset Configuration
+dataset:
+  name: "CARDSetSmall"
+  stereo: false
+  preprocessed: true
+  augmentation: false
+  clamp_gt: false
+  crop_to_road: false
+
+# Model Configuration
+model:
+  backbone: "DINOv2_fb"
+  regression: true
+  normalize: false
+  pred_head_dim: 128
+  cla_res: 0.5
+  dino_size: "small"
+  train_encoder: false
+  dinov2_layers: [5, 7, 9, 11]
+  upsampler_kind: "patch2feature"
+
+# Training Configuration
+training:
+  batch_size: 8
+  epochs: 30
+  seed: 307
+
+# Loss Configuration
+loss:
+  type: "composite"
+  pixel_type: "L1"
+  gradient_weight: 0
+  composite_weights:
+    pixel: 1.0
+    gradient: 0.0
+    structure: 0.0
+    normal: 0.0
+    smoothness: 0.0
+
+# Optimizer Configuration
+optimizer:
+  lr: 1.0e-4
+  lr_encoder: 1.0e-5
+
+# Scheduler Configuration
+scheduler:
+  type: "onecycle"
+
+# Logging and Checkpointing
+logging:
+  logdir: "/data/rhf/checkpoints/"
+  summary_freq: 10
+
+# Weights & Biases (WandB)
+wandb:
+  enabled: true
+  entity: "erwan-adonie-njike-ndjongang-cariad"
+  project: "RoadHeightFormer"
+  name_run: "RHF_composite_l1_only"
+  notes: "Freeze baseline + composite loss = L1 pixel term only (other weights = 0)"
+  dir: "/data/rhf/wandb"
+
+# Checkpoint Loading
+checkpoint:
+  load_path: null
